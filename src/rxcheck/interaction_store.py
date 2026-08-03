@@ -8,10 +8,16 @@ in the dataset.
 from __future__ import annotations
 
 import csv
+import itertools
 from dataclasses import dataclass
 from pathlib import Path
 
-from rxcheck.models import DEFAULT_SEVERITY_SCORE, Severity
+from rxcheck.models import (
+    DEFAULT_SEVERITY_SCORE,
+    InteractionRecord,
+    ResolvedDrug,
+    Severity,
+)
 
 SOURCE_SEPARATOR = ";"
 
@@ -105,3 +111,61 @@ def _parse_severity_score(raw: str | None) -> int:
     if not raw:
         return DEFAULT_SEVERITY_SCORE
     return int(raw)
+
+
+def generate_pairs(
+    resolved: list[ResolvedDrug],
+) -> list[tuple[ResolvedDrug, ResolvedDrug]]:
+    """Generate every unique unordered pair of resolved medications.
+
+    Args:
+        resolved: Deduplicated resolved medications.
+
+    Returns:
+        A list of (drug, drug) tuples, one per unique unordered pair,
+        sorted by drug_id so pair order is deterministic.
+    """
+    ordered = sorted(resolved, key=lambda drug: drug.drug_id)
+    return list(itertools.combinations(ordered, 2))
+
+
+def lookup_interactions(
+    pairs: list[tuple[ResolvedDrug, ResolvedDrug]], table: InteractionTable
+) -> list[InteractionRecord]:
+    """Look up each pair against the curated interaction table.
+
+    Args:
+        pairs: Unordered medication pairs, as returned by generate_pairs().
+        table: The loaded interaction table.
+
+    Returns:
+        InteractionRecords for pairs with a curated dataset entry. Pairs
+        with no entry are simply omitted; that is not an error.
+    """
+    records: list[InteractionRecord] = []
+    for first, second in pairs:
+        key = tuple(sorted((first.drug_id, second.drug_id)))
+        fact = table.get(key)
+        if fact is None:
+            continue
+
+        drug_a, drug_b = (
+            (first, second) if first.drug_id == fact.drug_id_a else (second, first)
+        )
+        records.append(
+            InteractionRecord(
+                drug_id_a=fact.drug_id_a,
+                drug_id_b=fact.drug_id_b,
+                drug_a_name=drug_a.canonical_name,
+                drug_b_name=drug_b.canonical_name,
+                severity=fact.severity,
+                mechanism_short=fact.mechanism_short,
+                clinical_text=fact.clinical_text,
+                action=fact.action,
+                sources=fact.sources,
+                severity_score=fact.severity_score,
+                age_band=fact.age_band,
+                age_note=fact.age_note,
+            )
+        )
+    return records
