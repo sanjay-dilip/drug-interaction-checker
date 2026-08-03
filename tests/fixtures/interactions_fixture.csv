@@ -1,0 +1,4 @@
+drug_id_a,drug_id_b,severity,severity_score,mechanism_short,clinical_text,action,sources,age_band,age_note
+alpha,gamma,major,80,Synthetic major mechanism,"Synthetic clinical text for a major-severity test fixture.",fixture_action_major,Fixture Source A,,
+alpha,beta,moderate,50,Synthetic moderate mechanism,"Synthetic clinical text for a moderate-severity test fixture.",fixture_action_moderate,Fixture Source B,,
+beta,gamma,minor,10,Synthetic minor mechanism,"Synthetic clinical text for a minor-severity test fixture.",fixture_action_minor,Fixture Source C,,
