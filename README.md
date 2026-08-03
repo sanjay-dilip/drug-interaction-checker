@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/sanjay-dilip/drug-interaction-checker/actions/workflows/ci.yml/badge.svg)](https://github.com/sanjay-dilip/drug-interaction-checker/actions/workflows/ci.yml)
 
-A command-line tool that takes a patient's medication list and returns ranked drug-drug interactions, sourced only from a small curated local dataset.
+A command-line tool that checks a patient's medication list for drug-drug interactions and ranks them by severity. Every interaction comes from a curated local dataset, not an LLM's medical knowledge — the optional LLM step can reword the retrieved text, but it can't invent facts.
 
 ## Architecture
 
