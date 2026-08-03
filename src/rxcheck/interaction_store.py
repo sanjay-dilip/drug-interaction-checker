@@ -14,6 +14,7 @@ from pathlib import Path
 
 from rxcheck.models import (
     DEFAULT_SEVERITY_SCORE,
+    SEVERITY_RANK,
     InteractionRecord,
     ResolvedDrug,
     Severity,
@@ -169,3 +170,25 @@ def lookup_interactions(
             )
         )
     return records
+
+
+def rank_interactions(records: list[InteractionRecord]) -> list[InteractionRecord]:
+    """Sort interaction records deterministically.
+
+    Order: major before moderate before minor; within the same severity,
+    higher severity_score first; ties broken by sorted drug name pair so
+    repeated runs return identical output.
+
+    Args:
+        records: Interaction records to rank.
+
+    Returns:
+        A new list, sorted deterministically.
+    """
+    return sorted(records, key=_ranking_key)
+
+
+def _ranking_key(record: InteractionRecord) -> tuple[int, int, tuple[str, str]]:
+    """Build the deterministic sort key for a single interaction record."""
+    names = tuple(sorted((record.drug_a_name, record.drug_b_name)))
+    return (-SEVERITY_RANK[record.severity], -record.severity_score, names)
