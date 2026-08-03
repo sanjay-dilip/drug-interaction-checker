@@ -1,0 +1,9 @@
+{
+  "medications": [
+    { "name": "warfarin", "dose": "5 mg daily" },
+    { "name": "ibuprofen", "dose": "400 mg as needed" },
+    { "name": "lisinopril", "dose": "10 mg daily" },
+    { "name": "vitamin z", "dose": "1 tablet daily" }
+  ],
+  "age_band": "65+"
+}

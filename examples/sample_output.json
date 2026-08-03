@@ -1,0 +1,35 @@
+{
+  "interactions": [
+    {
+      "drugs": [
+        "ibuprofen",
+        "warfarin"
+      ],
+      "severity": "major",
+      "mechanism_short": "Increased bleeding risk",
+      "explanation": "ibuprofen and warfarin have a major interaction: Concurrent use of NSAIDs such as ibuprofen with warfarin can increase the risk of gastrointestinal bleeding and potentiate the anticoagulant effect. Recommended action: talk_to_doctor.",
+      "action": "talk_to_doctor",
+      "sources": [
+        "DrugBank: DBI-12041",
+        "AHFS: 28:08.04.92"
+      ]
+    },
+    {
+      "drugs": [
+        "ibuprofen",
+        "lisinopril"
+      ],
+      "severity": "moderate",
+      "mechanism_short": "Reduced antihypertensive effect",
+      "explanation": "ibuprofen and lisinopril have a moderate interaction: NSAIDs like ibuprofen may reduce the blood-pressure-lowering effect of ACE inhibitors such as lisinopril and increase the risk of kidney impairment. Recommended action: monitor. Note for patients age 65+: Older adults have a higher risk of kidney impairment with this combination and should be monitored closely.",
+      "action": "monitor",
+      "sources": [
+        "AHFS: 28:08.04.92"
+      ]
+    }
+  ],
+  "checked_pairs": 3,
+  "unknown_drugs": [
+    "vitamin z"
+  ]
+}
