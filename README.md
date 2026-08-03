@@ -2,19 +2,7 @@
 
 [![CI](https://github.com/sanjay-dilip/drug-interaction-checker/actions/workflows/ci.yml/badge.svg)](https://github.com/sanjay-dilip/drug-interaction-checker/actions/workflows/ci.yml)
 
-A command-line tool that accepts a patient's medication list and returns
-ranked, drug-drug interactions sourced exclusively from a small curated
-local dataset.
-
-## Medical disclaimer
-
-**This is not a medical device and is not a substitute for a physician or
-pharmacist.** It is a small, focused coding project, not a validated
-clinical tool. The bundled dataset (`data/drugs.csv`, `data/interactions.csv`)
-is **illustrative and incomplete** — it covers a handful of example drugs
-and interactions and must never be relied on for real prescribing or
-patient-care decisions. Do not use this tool, or any output it produces,
-to make actual medical decisions.
+A command-line tool that takes a patient's medication list and returns ranked drug-drug interactions, sourced only from a small curated local dataset.
 
 ## Architecture
 
@@ -29,31 +17,17 @@ request JSON
     -> serialize_report()             (checker.py)   -> response JSON
 ```
 
-`check_medications()` in `checker.py` is the single orchestration entry
-point; the CLI (`cli.py`) only handles argument parsing, file I/O, and
-exit codes.
+`check_medications()` in `checker.py` is the single orchestration entry point. The CLI (`cli.py`) only handles argument parsing, file I/O, and exit codes.
 
 ## The dataset safety boundary
 
-**All interaction facts — severity, mechanism, recommended action, and
-sources — come only from `data/interactions.csv`.** Nothing in this
-codebase infers an interaction from drug classes, similar names, or
-general knowledge. A pair with no row in the dataset is simply omitted
-from the results; it is never assumed to be safe or unsafe. The dataset
-loader (`interaction_store.load_interaction_table`) validates that pairs
-are stored in canonical (sorted) order and that severities are one of
-`major` / `moderate` / `minor`, raising a `DataIntegrityError` if the
-dataset itself is malformed — this catches dataset-authoring bugs, not
-LLM behavior.
+All interaction facts — severity, mechanism, recommended action, sources — come only from `data/interactions.csv`. Nothing in the code infers an interaction from drug classes, similar names, or general knowledge. A pair with no row in the dataset is just left out of the results; it's never assumed safe or unsafe either way.
+
+The loader (`interaction_store.load_interaction_table`) checks that pairs are stored in canonical order and that severities are one of `major`, `moderate`, `minor`. It raises `DataIntegrityError` if the dataset itself is broken. That catches authoring mistakes in the CSV, not anything the LLM does.
 
 ## What the LLM can and cannot do
 
-The optional LLM explanation path (`--llm`) may only **rewrite** the
-deterministic explanation already generated from the retrieved
-`InteractionRecord`. It is given only: the two drug names, the severity,
-the mechanism, the clinical text, the recommended action, and an age note
-(only if the dataset has one matching the request's `age_band`) — never
-the full dataset, and never a choice about whether an interaction exists.
+The optional LLM explanation path (`--llm`) can only rewrite the deterministic explanation already generated from the retrieved `InteractionRecord`. It's given the two drug names, the severity, the mechanism, the clinical text, the recommended action, and an age note if the dataset has one matching the request's `age_band`. It never sees the full dataset and never decides whether an interaction exists.
 
 It must not, and is validated so that it cannot:
 - change the severity or recommended action
@@ -61,24 +35,11 @@ It must not, and is validated so that it cannot:
 - drop either drug's name
 - introduce a numeric fact not present in the retrieved record
 
-Every LLM output is validated (`explainer._is_valid_llm_output`) and any
-failure — an unavailable provider, a timeout, empty output, malformed
-output, output over the length limit, a missing drug name, or an invented
-number — **fails closed**: the deterministic explanation is used instead,
-and the request never fails because of the LLM.
+Every LLM output is validated (`explainer._is_valid_llm_output`). Any failure — an unavailable provider, a timeout, empty output, malformed output, output over the length limit, a missing drug name, or an invented number — falls back to the deterministic explanation. The request never fails because of the LLM.
 
-**This build ships the LLM path as a fully-tested interface only** — an
-`ExplanationProvider` protocol, a `DeterministicExplanationProvider`
-(the default, always available, no network access), and an
-`LLMExplanationProvider` that wraps a mockable `LLMClientProtocol`. No
-real LLM provider is wired up, so `--llm` currently logs a warning and
-falls back to the deterministic explanation. The default path never makes
-a network call and never requires an API key.
+This build ships the LLM path as a tested interface only: an `ExplanationProvider` protocol, a `DeterministicExplanationProvider` (the default, always available, no network access), and an `LLMExplanationProvider` that wraps a mockable `LLMClientProtocol`. No real LLM provider is wired up yet, so `--llm` logs a warning and falls back to the deterministic explanation. The default path never makes a network call and never needs an API key.
 
-We do not claim that automated validation can guarantee complete medical
-faithfulness of any LLM rewrite. The safety boundary is architectural: the
-interaction, severity, action, and sources always come from the dataset;
-the LLM is restricted to rewriting one already-retrieved record.
+Automated validation can't guarantee an LLM rewrite is fully faithful to the medical facts. The safety boundary here is architectural: the interaction, severity, action, and sources always come from the dataset, and the LLM is restricted to rewriting one already-retrieved record.
 
 ## Project structure
 
@@ -146,8 +107,7 @@ No network access is required or used by default.
 
 ## Sample output
 
-`examples/sample_output.json` (generated by running the CLI against the
-sample input above):
+`examples/sample_output.json`, generated by running the CLI against the sample input above:
 
 ```json
 {
@@ -174,10 +134,7 @@ sample input above):
 }
 ```
 
-`warfarin` + `lisinopril` was also checked (3 recognized medications ->
-3 pairs) but has no curated interaction entry, so it does not appear.
-`vitamin z` is not in the drug dictionary and is reported in
-`unknown_drugs` rather than silently dropped.
+`warfarin` + `lisinopril` was also checked (3 recognized medications means 3 pairs), but it has no curated interaction entry, so it doesn't appear. `vitamin z` isn't in the drug dictionary and shows up in `unknown_drugs` instead of getting silently dropped.
 
 ## Tests
 
@@ -185,7 +142,7 @@ sample input above):
 pytest -q
 ```
 
-All tests run offline, without an LLM provider or API key.
+All tests run offline, with no LLM provider or API key.
 
 ## Dataset schema
 
@@ -212,19 +169,9 @@ All tests run offline, without an LLM provider or API key.
 
 ## Limitations
 
-- The bundled dataset is **illustrative and incomplete** — a handful of
-  example drugs and interactions, not a real clinical reference.
-- Name resolution is exact-match only (after whitespace/case
-  normalization and alias lookup); there is no fuzzy matching, so
-  misspelled or unlisted medication names are reported as unknown rather
-  than guessed at.
-- Only pairwise interactions are checked; there is no multi-drug
-  interaction inference, allergy checking, disease diagnosis, or food/
-  supplement interaction support.
-- `age_band` can only surface an existing dataset note for that band; it
-  can never create or change an interaction result.
-- The optional LLM path in this build has no real provider wired up —
-  `--llm` logs a warning and uses the deterministic explanation.
-- This project is not clinically validated and makes no claim of
-  completeness or accuracy beyond what is explicitly stored in the
-  bundled CSV files.
+- The bundled dataset is illustrative and incomplete: a handful of example drugs and interactions, not a real clinical reference.
+- Name resolution is exact-match only, after whitespace/case normalization and alias lookup. There's no fuzzy matching, so misspelled or unlisted medication names come back as unknown rather than guessed at.
+- Only pairwise interactions are checked. There's no multi-drug interaction inference, allergy checking, disease diagnosis, or food/supplement interaction support.
+- `age_band` can only surface an existing dataset note for that band. It can never create or change an interaction result.
+- The optional LLM path has no real provider wired up in this build. `--llm` logs a warning and uses the deterministic explanation.
+- This project isn't clinically validated and makes no claim of completeness or accuracy beyond what's explicitly stored in the bundled CSV files.
