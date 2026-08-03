@@ -60,3 +60,30 @@ def check_medications(
         checked_pairs=len(pairs),
         unknown_drugs=tuple(unknown),
     )
+
+
+def serialize_report(report: CheckReport) -> dict[str, Any]:
+    """Convert a CheckReport into the required JSON-compatible response shape.
+
+    Args:
+        report: The report produced by check_medications().
+
+    Returns:
+        A dict matching the rxcheck output contract:
+        {"interactions": [...], "checked_pairs": int, "unknown_drugs": [...]}.
+    """
+    return {
+        "interactions": [
+            {
+                "drugs": [result.record.drug_a_name, result.record.drug_b_name],
+                "severity": result.record.severity.value,
+                "mechanism_short": result.record.mechanism_short,
+                "explanation": result.explanation,
+                "action": result.record.action,
+                "sources": list(result.record.sources),
+            }
+            for result in report.interactions
+        ],
+        "checked_pairs": report.checked_pairs,
+        "unknown_drugs": list(report.unknown_drugs),
+    }
